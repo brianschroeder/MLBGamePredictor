@@ -1,7 +1,6 @@
 $ProgressPreference = 'Silent'
 $ErrorActionPreference = 'SilentlyContinue'
-
-$Games = (Invoke-WebRequest -UseBasicParsing  -Uri "http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1&date=09/25/2020" | ConvertFrom-Json).Dates.Games.gamepk
+$Games = (Invoke-WebRequest -UseBasicParsing  -Uri "http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1" | ConvertFrom-Json).Dates.Games.gamepk
 $BaseballDataPoints = foreach ($game in $games) {
         $TeamStats = (Invoke-WebRequest -UseBasicParsing -Uri http://statsapi.mlb.com/api/v1/game/$Game/boxscore | ConvertFrom-Json)
         $HBA = New-Object -TypeName "System.Collections.ArrayList"
@@ -10,7 +9,7 @@ $BaseballDataPoints = foreach ($game in $games) {
         $HERA = New-Object -TypeName "System.Collections.ArrayList"
 
         foreach ($Batter in $TeamStats.Teams.away.battingorder){
-            $HBA += (Invoke-WebRequest -UseBasicParsing -Uri "https://statsapi.mlb.com/api/v1/people/$Batter/stats?stats=byDateRange&season=2020&group=hitting&startDate=10/20/1994&endDate=10/12/2028&leagueListId=mlb_milb" | ConvertFrom-Json).Stats.splits[0].stat.avg[1..3] -join ''    
+            $HBA += (Invoke-WebRequest -UseBasicParsing -Uri "https://statsapi.mlb.com/api/v1/people/$Batter/stats?stats=byDateRange&season=2020&group=hitting&startDate=10/20/1994&endDate=10/12/2028&leagueListId=mlb_milb" | ConvertFrom-Json).Stats.splits[0].stat.avg[1..3] -join '' 
         }
         
         foreach ($Batter in $TeamStats.Teams.home.battingorder) {
@@ -19,6 +18,7 @@ $BaseballDataPoints = foreach ($game in $games) {
 
         foreach ($Pitcher in $TeamStats.Teams.away.pitchers[0]){
             $AERA += (Invoke-WebRequest -UseBasicParsing -Uri "https://statsapi.mlb.com/api/v1/people/$Pitcher/stats?stats=byDateRange&season=2020&group=pitching&startDate=10/20/1994&endDate=10/12/2028&leagueListId=mlb_milb" | ConvertFrom-Json).stats.splits[0].stat.ERA
+            
         }
         
         foreach ($Pitcher in $TeamStats.Teams.home.pitchers[0]) {
@@ -70,19 +70,25 @@ $BaseballDataPoints = foreach ($game in $games) {
         }
 }
 
-$BaseballPredictionTable = $BaseballDataPoints | Sort-Object HomeAdvantage -Descending 
-
-foreach ($BattingAverage in $BaseballTable) {
+$BaseballPredictionTable = $BaseballDataPoints | Sort-Object StartTime -Descending 
+$GameDataHTML = New-Object -TypeName "System.Collections.ArrayList"
+$GameDataHTML += "
+<replace>
+"
+foreach ($BattingAverage in $BaseballPredictionTable) {
     if ($BattingAverage.HomeBattingAverage -gt $BattingAverage.AwayBattingAverage -and $BattingAverage.HomeStartingPitcherERA -lt $BattingAverage.AwayStartingPitcherERA) {
-        Write-Host "$($BattingAverage.HomeTeam) looks to have an advantage over $($BattingAverage.AwayTeam) by $($BattingAverage.HomeAdvantage)% at $($BattingAverage.StartTime)"  -ForegroundColor Green
-        Write-Host `n"$($BattingAverage.HomeTeam) has a roster Batting Average advantage by $($BattingAverage.HomeBAVSAway)"
-        Write-Host "$($BattingAverage.HomeTeam) has a starting pitcher ERA advantage by $($BattingAverage.HomeERAVSAway)%"`n
+        $GameDataHTML += "<h3><b>$($BattingAverage.HomeTeam) looks to have an advantage over $($BattingAverage.AwayTeam) by $($BattingAverage.HomeAdvantage)% at $($BattingAverage.StartTime)</h3>"
+        $GameDataHTML += "<h4>$($BattingAverage.HomeTeam) have a roster Batting Average advantage by $($BattingAverage.HomeBAVSAway)</h4>" 
+        $GameDataHTML += "<h4>$($BattingAverage.HomeTeam) have a starting pitcher ERA advantage by $($BattingAverage.HomeERAVSAway)</h4>" 
 
     }       
 
     if ($BattingAverage.AwayBattingAverage -gt $BattingAverage.HomeBattingAverage -and $BattingAverage.AwayStartingPitcherERA -lt $BattingAverage.HomeStartingPitcherERA) {
-        Write-Host "$($BattingAverage.AwayTeam) looks to have an advantage over $($BattingAverage.HomeTeam) by $($BattingAverage.AwayAdvantage)% at $($BattingAverage.StartTime)" -ForegroundColor Green
-        Write-Host `n"$($BattingAverage.AwayTeam) has a roster Batting Average advantage by $($BattingAverage.AwayBAVSHome)"
-        Write-Host "$($BattingAverage.AwayTeam) has a starting pitcher ERA advantage by $($BattingAverage.AwayERAVSHome)%"`n
+        $GameDataHTML += "<h3><b>$($BattingAverage.AwayTeam) looks to have an advantage over $($BattingAverage.HomeTeam) by $($BattingAverage.AwayAdvantage)% at $($BattingAverage.StartTime)</h3>"  
+        $GameDataHTML += "<h4>$($BattingAverage.AwayTeam) have a roster Batting Average advantage by $($BattingAverage.AwayBAVSHome)</h4>" 
+        $GameDataHTML += "<h4>$($BattingAverage.AwayTeam) have a starting pitcher ERA advantage by $($BattingAverage.AwayERAVSHome)</h4>" 
     }
 }
+
+$NewPredictions = ((Get-Content 'C:\inetpub\wwwroot\MLBGamePredictor\index.html') -replace '.+advantage.+' -replace '<replace>',"$GameDataHTML ") | Out-String
+New-Item -Name 'index.html' -Path C:\inetpub\wwwroot\MLBGamePredictor -ItemType File -Value $NewPredictions -Force | Out-Null
