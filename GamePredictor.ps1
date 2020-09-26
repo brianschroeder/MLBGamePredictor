@@ -1,5 +1,6 @@
 $ProgressPreference = 'Silent'
 $ErrorActionPreference = 'SilentlyContinue'
+
 $Games = (Invoke-WebRequest -UseBasicParsing  -Uri "http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1&date=09/25/2020" | ConvertFrom-Json).Dates.Games.gamepk
 $BaseballDataPoints = foreach ($game in $games) {
         $TeamStats = (Invoke-WebRequest -UseBasicParsing -Uri http://statsapi.mlb.com/api/v1/game/$Game/boxscore | ConvertFrom-Json)
@@ -9,8 +10,7 @@ $BaseballDataPoints = foreach ($game in $games) {
         $HERA = New-Object -TypeName "System.Collections.ArrayList"
 
         foreach ($Batter in $TeamStats.Teams.away.battingorder){
-            $HBA += (Invoke-WebRequest -UseBasicParsing -Uri "https://statsapi.mlb.com/api/v1/people/$Batter/stats?stats=byDateRange&season=2020&group=hitting&startDate=10/20/1994&endDate=10/12/2028&leagueListId=mlb_milb" | ConvertFrom-Json).Stats.splits[0].stat.avg[1..3] -join '' 
-            
+            $HBA += (Invoke-WebRequest -UseBasicParsing -Uri "https://statsapi.mlb.com/api/v1/people/$Batter/stats?stats=byDateRange&season=2020&group=hitting&startDate=10/20/1994&endDate=10/12/2028&leagueListId=mlb_milb" | ConvertFrom-Json).Stats.splits[0].stat.avg[1..3] -join ''    
         }
         
         foreach ($Batter in $TeamStats.Teams.home.battingorder) {
@@ -19,7 +19,6 @@ $BaseballDataPoints = foreach ($game in $games) {
 
         foreach ($Pitcher in $TeamStats.Teams.away.pitchers[0]){
             $AERA += (Invoke-WebRequest -UseBasicParsing -Uri "https://statsapi.mlb.com/api/v1/people/$Pitcher/stats?stats=byDateRange&season=2020&group=pitching&startDate=10/20/1994&endDate=10/12/2028&leagueListId=mlb_milb" | ConvertFrom-Json).stats.splits[0].stat.ERA
-            
         }
         
         foreach ($Pitcher in $TeamStats.Teams.home.pitchers[0]) {
@@ -66,19 +65,24 @@ $BaseballDataPoints = foreach ($game in $games) {
                 AwayBAVSHome = $AwayBattingAverageDifference
                 AwayERAVSHome = $AwayERADifference
                 AwayAdvantage = [int]($AwayBattingAverageDifference -replace '%' -join '') + [int]($AwayERADifference -replace '%' -join '')
-                StartTime = ($TeamStats.info.value | Select-String 'PM.') -replace ' ' -replace '[.]'
+                StartTime = (($TeamStats.info.value) | Select-String ' PM') -replace '[.]'
             }
         }
 }
 
-$BaseballDataPoints  | Select-Object HomeTeam,HomeAdvantage,AwayTeam,AwayAdvantage,StartTime | Sort-Object HomeAdvantage -Descending | Format-Table 
+$BaseballPredictionTable = $BaseballDataPoints | Sort-Object HomeAdvantage -Descending 
 
-foreach ($BattingAverage in $BaseballDataPoints) {
+foreach ($BattingAverage in $BaseballTable) {
     if ($BattingAverage.HomeBattingAverage -gt $BattingAverage.AwayBattingAverage -and $BattingAverage.HomeStartingPitcherERA -lt $BattingAverage.AwayStartingPitcherERA) {
-        Write-Host "$($BattingAverage.HomeTeam) looks to have an advantage over $($BattingAverage.AwayTeam)" -ForegroundColor Green
+        Write-Host "$($BattingAverage.HomeTeam) looks to have an advantage over $($BattingAverage.AwayTeam) by $($BattingAverage.HomeAdvantage)% at $($BattingAverage.StartTime)"  -ForegroundColor Green
+        Write-Host `n"$($BattingAverage.HomeTeam) has a roster Batting Average advantage by $($BattingAverage.HomeBAVSAway)"
+        Write-Host "$($BattingAverage.HomeTeam) has a starting pitcher ERA advantage by $($BattingAverage.HomeERAVSAway)%"`n
+
     }       
 
     if ($BattingAverage.AwayBattingAverage -gt $BattingAverage.HomeBattingAverage -and $BattingAverage.AwayStartingPitcherERA -lt $BattingAverage.HomeStartingPitcherERA) {
-        Write-Host "$($BattingAverage.AwayTeam) looks to have an advantage over $($BattingAverage.HomeTeam)" -ForegroundColor Green
+        Write-Host "$($BattingAverage.AwayTeam) looks to have an advantage over $($BattingAverage.HomeTeam) by $($BattingAverage.AwayAdvantage)% at $($BattingAverage.StartTime)" -ForegroundColor Green
+        Write-Host `n"$($BattingAverage.AwayTeam) has a roster Batting Average advantage by $($BattingAverage.AwayBAVSHome)"
+        Write-Host "$($BattingAverage.AwayTeam) has a starting pitcher ERA advantage by $($BattingAverage.AwayERAVSHome)%"`n
     }
 }
