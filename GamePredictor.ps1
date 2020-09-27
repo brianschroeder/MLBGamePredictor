@@ -80,7 +80,6 @@ foreach ($DataPoints in $BaseballDataPoints | Sort-Object HomeAdvantage -Descend
         $GameDataHTML += "<h3><b>$($DataPoints.HomeTeam) look to have an advantage over $($DataPoints.AwayTeam) by $($DataPoints.HomeAdvantage)% at $($DataPoints.StartTime)</h3>"
         $GameDataHTML += "<h4>$($DataPoints.HomeTeam) have a roster Batting Average advantage by $($DataPoints.HomeBAVSAway)</h4>" 
         $GameDataHTML += "<h4>$($DataPoints.HomeTeam) have a starting pitcher ERA advantage by $($DataPoints.HomeERAVSAway)</h4>" 
-
     }
 }       
 
