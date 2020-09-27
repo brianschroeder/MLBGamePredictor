@@ -96,5 +96,5 @@ foreach ($DataPoints in $BaseballDataPoints | Sort-Object AwayAdvantage -Descend
 $HeaderDate = (Get-Date -UFormat "%A, %B %d, %Y")
 $FooterDate = Get-Date -UFormat "%A, %B %d, %Y %T"
 $GameDataHTML += "Last Updated: $FooterDate" 
-$NewPredictions = ((Get-Content 'C:\inetpub\wwwroot\MLBGamePredictor\index.html') -replace '.+advantage.+' -replace '<replace>',"$GameDataHTML" -replace '.+<date>.+',"<date> $HeaderDate") | Out-String
+$NewPredictions = ((Get-Content 'C:\inetpub\wwwroot\MLBGamePredictor\index.html') -replace '.+advantage.+' -replace '<replace>',"$GameDataHTML" -replace '.+<date>.+',"<date><b>$HeaderDate</b>") | Out-String
 New-Item -Name 'index.html' -Path C:\inetpub\wwwroot\MLBGamePredictor -ItemType File -Value $NewPredictions -Force | Out-Null
