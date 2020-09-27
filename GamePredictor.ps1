@@ -1,6 +1,7 @@
 $ProgressPreference = 'Silent'
 
-$Games = (Invoke-WebRequest -UseBasicParsing  -Uri "http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1" | ConvertFrom-Json).Dates.Games.gamepk
+$GameDate = (Get-Date -UFormat "%m/%d/%Y").ToString()
+$Games = (Invoke-WebRequest -UseBasicParsing  -Uri "http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1&date=$GameDate" | ConvertFrom-Json).Dates.Games.gamepk
 $BaseballDataPoints = foreach ($game in $games) {
         $TeamStats = (Invoke-WebRequest -UseBasicParsing -Uri http://statsapi.mlb.com/api/v1/game/$Game/boxscore | ConvertFrom-Json)
         $HomeBA = New-Object -TypeName "System.Collections.ArrayList"
@@ -73,27 +74,35 @@ $GameDataHTML = New-Object -TypeName "System.Collections.ArrayList"
 $GameDataHTML += "
 <replace>
 "
+$BaseballDataPoints | Sort-Object HomeAdvantage -Descending
 
 $GameDataHTML += "<h2><b>Home Teams</h2>"
+
 foreach ($DataPoints in $BaseballDataPoints | Sort-Object HomeAdvantage -Descending ) {
     if ($DataPoints.HomeBattingAverage -gt $DataPoints.AwayBattingAverage -and $DataPoints.HomeStartingPitcherERA -lt $DataPoints.AwayStartingPitcherERA -and $DataPoints.HomeAdvantage -gt 27) {
-        $GameDataHTML += "<h3><b>$($DataPoints.HomeTeam) look to have an advantage over $($DataPoints.AwayTeam) by $($DataPoints.HomeAdvantage)% at $($DataPoints.StartTime)</h3>"
-        $GameDataHTML += "<h4>$($DataPoints.HomeTeam) have a roster Batting Average advantage by $($DataPoints.HomeBAVSAway)</h4>" 
-        $GameDataHTML += "<h4>$($DataPoints.HomeTeam) have a starting pitcher ERA advantage by $($DataPoints.HomeERAVSAway)</h4>" 
+        $GameDataHTML += "<h3><b>$($DataPoints.HomeTeam) look to have an advantage over $($DataPoints.AwayTeam) by $($DataPoints.HomeAdvantage)%</h3>"
+        $GameDataHTML += "<h3><b>Start Time: $($DataPoints.StartTime)<h3>"
+        $GameDataHTML += "<h4><b>$($DataPoints.HomeTeam) have a roster Batting Average advantage by $($DataPoints.HomeBAVSAway)</h4>" 
+        $GameDataHTML += "<h4><b>$($DataPoints.HomeTeam) have a starting pitcher ERA advantage by $($DataPoints.HomeERAVSAway)</h4>" 
     }
 }       
 
 $GameDataHTML += "<h2><b>Away Teams</h2>"
+
 foreach ($DataPoints in $BaseballDataPoints | Sort-Object AwayAdvantage -Descending ) {
     if ($DataPoints.AwayBattingAverage -gt $DataPoints.HomeBattingAverage -and $DataPoints.AwayStartingPitcherERA -lt $DataPoints.HomeStartingPitcherERA -and $DataPoints.AwayAdvantage -gt 27) {
-        $GameDataHTML += "<h3><b>$($DataPoints.AwayTeam) look to have an advantage over $($DataPoints.HomeTeam) by $($DataPoints.AwayAdvantage)% at $($DataPoints.StartTime)</h3>"  
-        $GameDataHTML += "<h4>$($DataPoints.AwayTeam) have a roster Batting Average advantage by $($DataPoints.AwayBAVSHome)</h4>" 
-        $GameDataHTML += "<h4>$($DataPoints.AwayTeam) have a starting pitcher ERA advantage by $($DataPoints.AwayERAVSHome)</h4>" 
+        $GameDataHTML += "<h3><b>$($DataPoints.AwayTeam) look to have an advantage over $($DataPoints.HomeTeam) by $($DataPoints.AwayAdvantage)%</h3>"  
+        $GameDataHTML += "<h3><b>Start Time: $($DataPoints.StartTime)<h3>"
+        $GameDataHTML += "<h4><b>$($DataPoints.AwayTeam) have a roster Batting Average advantage by $($DataPoints.AwayBAVSHome)</h4>" 
+        $GameDataHTML += "<h4><b>$($DataPoints.AwayTeam) have a starting pitcher ERA advantage by $($DataPoints.AwayERAVSHome)</h4>" 
     }
 }
 
 $HeaderDate = (Get-Date -UFormat "%A, %B %d, %Y")
 $FooterDate = Get-Date -UFormat "%A, %B %d, %Y %T"
 $GameDataHTML += "Last Updated: $FooterDate" 
-$NewPredictions = ((Get-Content 'C:\inetpub\wwwroot\MLBGamePredictor\index.html') -replace '.+advantage.+' -replace '<replace>',"$GameDataHTML" -replace '.+<date>.+',"<date><b>$HeaderDate</b>") | Out-String
-New-Item -Name 'index.html' -Path C:\inetpub\wwwroot\MLBGamePredictor -ItemType File -Value $NewPredictions -Force | Out-Null
+
+if ($GameDataHTML -like '*advantage*') {
+    $NewPredictions = ((Get-Content 'C:\inetpub\wwwroot\MLBGamePredictor\index.html') -replace '.+advantage.+' -replace '<replace>',"$GameDataHTML" -replace '.+<date>.+',"<date><b>$HeaderDate</b>") | Out-String
+    New-Item -Name 'index.html' -Path C:\inetpub\wwwroot\MLBGamePredictor -ItemType File -Value $NewPredictions -Force | Out-Null
+}
