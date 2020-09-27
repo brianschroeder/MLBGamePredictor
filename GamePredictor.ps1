@@ -10,7 +10,6 @@ $BaseballDataPoints = foreach ($game in $games) {
 
         foreach ($Batter in $TeamStats.Teams.away.battingorder){
             $HomeBA += (Invoke-WebRequest -UseBasicParsing -Uri "https://statsapi.mlb.com/api/v1/people/$Batter/stats?stats=byDateRange&season=2020&group=hitting&startDate=10/20/1994&endDate=10/12/2028&leagueListId=mlb_milb" | ConvertFrom-Json).Stats.splits[0].stat.avg[1..3] -join '' 
-            
         }
         
         foreach ($Batter in $TeamStats.Teams.home.battingorder) {
@@ -19,7 +18,6 @@ $BaseballDataPoints = foreach ($game in $games) {
 
         foreach ($Pitcher in $TeamStats.Teams.away.pitchers[0]){
             $AwayERA += (Invoke-WebRequest -UseBasicParsing -Uri "https://statsapi.mlb.com/api/v1/people/$Pitcher/stats?stats=byDateRange&season=2020&group=pitching&startDate=10/20/1994&endDate=10/12/2028&leagueListId=mlb_milb" | ConvertFrom-Json).stats.splits[0].stat.ERA
-            
         }
         
         foreach ($Pitcher in $TeamStats.Teams.home.pitchers[0]) {
