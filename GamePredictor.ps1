@@ -2,7 +2,7 @@ $ProgressPreference = 'Silent'
 $GameDate = (Get-Date -UFormat "%m/%d/%Y").ToString()
 $HeaderDate = (Get-Date -UFormat "%A, %B %d, %Y")
 $FooterDate = Get-Date -UFormat "%A, %B %d, %Y %T"
-$Games = (Invoke-WebRequest -UseBasicParsing  -Uri "http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1&date=09/26/2020" | ConvertFrom-Json).Dates.Games.gamepk
+$Games = (Invoke-WebRequest -UseBasicParsing  -Uri "http://statsapi.mlb.com/api/v1/schedule/games/?sportId=1&date=$GameDate" | ConvertFrom-Json).Dates.Games.gamepk
 $BaseballDataPoints = foreach ($game in $games) {
         $TeamStats = (Invoke-WebRequest -UseBasicParsing -Uri http://statsapi.mlb.com/api/v1/game/$Game/boxscore | ConvertFrom-Json)
         $HomeBA = New-Object -TypeName "System.Collections.ArrayList"
