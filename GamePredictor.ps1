@@ -75,7 +75,7 @@ $GameDataHTML = New-Object -TypeName "System.Collections.ArrayList"
 $GameDataHTML += "
 <replace>
 "
-$BaseballDataPoints | Sort-Object AwayAdvantage -Descending 
+$BaseballDataPoints | Sort-Object AwayAdvantage -Descending | Format-Table
 $GameDataHTML += "<h2><b>Home Teams</h2>
 "
 foreach ($DataPoints in $BaseballDataPoints | Sort-Object HomeAdvantage -Descending ) {
